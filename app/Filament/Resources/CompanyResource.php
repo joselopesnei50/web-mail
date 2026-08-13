@@ -37,7 +37,7 @@ class CompanyResource extends Resource
                         ->label('Ativo')
                         ->default(true),
                 ])->columns(2),
-                Forms\Components\Card::make()->schema([
+                Forms\Components\Section::make('Capacidade e Limites')->schema([
                     Forms\Components\TextInput::make('max_users')
                         ->label('Límite de Usuários')
                         ->numeric()
@@ -50,7 +50,7 @@ class CompanyResource extends Resource
                         ->label('Armazenamento (MB)')
                         ->numeric()
                         ->default(1024),
-                ])->columns(3)->heading('Capacidade e Limites'),
+                ])->columns(3),
             ]);
     }
 
