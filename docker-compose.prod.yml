@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    hostname: mx.nc5hubdigital.com.br
+    domainname: nc5hubdigital.com.br
+    ports:
+      - "25:25"
+      - "143:143"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+    environment:
+      - DMS_DEBUG=0
+      - ENABLE_SPAMASSASSIN=1
+      - SPAMASSASSIN_SPAM_TO_INBOX=1
+      - ENABLE_CLAMAV=0
+      - ENABLE_FAIL2BAN=1
+      - ENABLE_POSTGREY=0
+      - ENABLE_SASLAUTHD=0
+      - ONE_DIR=1
+      - PERMIT_DOCKER=network
+    volumes:
+      - ./mail-data/mail-data:/var/mail
+      - ./mail-data/mail-state:/var/mail-state
+      - ./mail-data/mail-logs:/var/log/mail
+      - ./mail-data/config:/tmp/docker-mailserver
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: nc5mail-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./redis-data:/data
+    command: redis-server --appendonly yes
+    restart: always

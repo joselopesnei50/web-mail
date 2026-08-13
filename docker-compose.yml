@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  app:
+    image: php:8.2-fpm
+    container_name: mail_app
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - mail-network
+
+  web:
+    image: nginx:alpine
+    container_name: mail_web
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - mail-network
+
+  db:
+    image: mysql:8.0
+    container_name: mail_db
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-mail_db}
+      MYSQL_USER: ${DB_USERNAME:-mail_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - mail-network
+
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    hostname: mail.example.com
+    environment:
+      - ENABLE_SPAMASSASSIN=0
+      - ENABLE_CLAMAV=0
+      - ENABLE_FAIL2BAN=0
+      - ENABLE_POSTGREY=0
+      - ONE_DIR=1
+      - PERMIT_DOCKER=network
+    ports:
+      - "25:25"
+      - "143:143"
+      - "587:587"
+      - "993:993"
+    volumes:
+      - maildata:/var/mail
+      - mailstate:/var/mail-state
+      - maillogs:/var/log/mail
+      - ./docker-data/dms/config/:/tmp/docker-mailserver/
+    networks:
+      - mail-network
+
+networks:
+  mail-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+  maildata:
+  mailstate:
+  maillogs:
