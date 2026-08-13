@@ -36,10 +36,19 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $isFirstUser = User::count() === 0;
+
+        $company = \App\Models\Company::create([
+            'name' => $isFirstUser ? 'NC5 Hub Digital' : $request->name . ' - Workspace',
+            'domain' => $isFirstUser ? 'nc5hubdigital.com.br' : null,
+        ]);
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'company_id' => $company->id,
+            'role' => $isFirstUser ? 'super_admin' : 'admin',
         ]);
 
         event(new Registered($user));
