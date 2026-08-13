@@ -40,7 +40,7 @@ class RegisteredUserController extends Controller
 
         $company = \App\Models\Company::create([
             'name' => $isFirstUser ? 'NC5 Hub Digital' : $request->name . ' - Workspace',
-            'domain' => $isFirstUser ? 'nc5hubdigital.com.br' : null,
+            'domain' => $isFirstUser ? 'nc5hubdigital.com.br' : \Illuminate\Support\Str::slug($request->name) . '.nc5hubdigital.com.br',
         ]);
 
         $user = User::create([
