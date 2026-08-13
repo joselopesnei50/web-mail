@@ -13,6 +13,9 @@ class Company extends Model
         'name',
         'domain',
         'is_active',
+        'max_users',
+        'max_emails_month',
+        'storage_limit_mb',
     ];
 
     public function users()
