@@ -71,9 +71,10 @@ class MailserverService
         }
 
         $container = config('mailserver.container', 'mailserver');
-        $useSudo = config('mailserver.use_sudo', true) ? 'sudo -n ' : '';
+        $dockerBin = config('mailserver.docker_bin', '/usr/bin/docker');
+        $prefix = config('mailserver.use_sudo', true) ? 'sudo -n ' : '';
 
-        $parts = [$useSudo . 'docker', 'exec', escapeshellarg($container), 'setup'];
+        $parts = [$prefix . $dockerBin, 'exec', escapeshellarg($container), 'setup'];
         foreach ($setupArgs as $a) {
             $parts[] = escapeshellarg($a);
         }
