@@ -9,11 +9,11 @@ cd "$APP_DIR"
 echo "==> git pull"
 git pull --ff-only
 
-echo "==> composer install"
-composer install --no-dev --optimize-autoloader
+echo "==> composer install (via www-data pra evitar permission-denied em storage/logs)"
+sudo -u www-data composer install --no-dev --optimize-autoloader
 
 echo "==> composer dump-autoload"
-composer dump-autoload -o
+sudo -u www-data composer dump-autoload -o
 
 echo "==> php artisan migrate --force"
 php artisan migrate --force

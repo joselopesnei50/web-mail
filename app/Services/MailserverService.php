@@ -65,13 +65,13 @@ class MailserverService
 
     private function execRaw(array $setupArgs): array
     {
-        if (! env('MAILSERVER_CLI_ENABLED', false)) {
-            Log::info('MailserverService dry-run (MAILSERVER_CLI_ENABLED=false)', ['args' => $setupArgs]);
+        if (! config('mailserver.cli_enabled', false)) {
+            Log::info('MailserverService dry-run (mailserver.cli_enabled=false)', ['args' => $setupArgs]);
             return [true, ''];
         }
 
-        $container = env('MAILSERVER_CONTAINER', 'mailserver');
-        $useSudo = env('MAILSERVER_USE_SUDO', true) ? 'sudo -n ' : '';
+        $container = config('mailserver.container', 'mailserver');
+        $useSudo = config('mailserver.use_sudo', true) ? 'sudo -n ' : '';
 
         $parts = [$useSudo . 'docker', 'exec', escapeshellarg($container), 'setup'];
         foreach ($setupArgs as $a) {
