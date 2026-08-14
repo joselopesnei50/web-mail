@@ -80,11 +80,10 @@ class MailserverService
         }
         $cmd = trim(implode(' ', $parts)) . ' 2>&1';
 
-        $output = shell_exec($cmd);
-        if ($output === null || $output === false) {
-            return [false, ''];
-        }
-        return [true, (string) $output];
+        $output = [];
+        $exitCode = -1;
+        exec($cmd, $output, $exitCode);
+        return [$exitCode === 0, implode("\n", $output)];
     }
 
     private function isValidEmail(string $email): bool
