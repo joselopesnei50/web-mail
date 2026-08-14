@@ -42,13 +42,28 @@ class EmailController extends Controller
             'body' => 'required|string',
         ]);
 
+        $user = $request->user();
+        $company = $user->company;
+
+        if ($company && $company->max_emails_month) {
+            $sentThisMonth = Email::where('user_id', $user->id)
+                ->where('type', 'sent')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+            if ($sentThisMonth >= $company->max_emails_month) {
+                return redirect()->route('dashboard', ['compose' => true])
+                    ->with('status', "Cota mensal atingida ({$company->max_emails_month} envios). Contate seu administrador.");
+            }
+        }
+
         $subject = $request->subject ?? '(Sem Assunto)';
         $body = $request->body;
         $recipient = $request->recipient;
-        $senderEmail = auth()->user()->email;
-        $senderName = auth()->user()->name;
+        $senderEmail = $user->email;
+        $senderName = $user->name;
 
-        // Disparo real via SMTP
         try {
             Mail::raw($body, function ($message) use ($recipient, $subject, $senderEmail, $senderName) {
                 $message->to($recipient)
@@ -59,9 +74,8 @@ class EmailController extends Controller
             return redirect()->route('dashboard', ['compose' => true])->with('status', 'Erro de SMTP: ' . $e->getMessage());
         }
 
-        // Salvar na pasta "Enviados" localmente
         $email = Email::create([
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'sender' => $senderEmail,
             'recipient' => $recipient,
             'subject' => $subject,
@@ -70,7 +84,6 @@ class EmailController extends Controller
             'is_read' => true,
         ]);
 
-        // Disparar análise de IA em background
         \App\Jobs\AnalyzeEmailWithBruceIA::dispatch($email);
 
         return redirect()->route('dashboard')->with('status', 'E-mail enviado via SMTP com sucesso! (Análise IA Iniciada)');

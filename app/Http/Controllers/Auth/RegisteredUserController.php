@@ -48,8 +48,8 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'company_id' => $company->id,
-            'role' => $isFirstUser ? 'super_admin' : 'admin',
         ]);
+        $user->forceFill(['role' => $isFirstUser ? 'super_admin' : 'admin'])->save();
 
         event(new Registered($user));
 

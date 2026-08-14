@@ -31,7 +31,9 @@ Route::get('/termos', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [EmailController::class, 'inbox'])->name('dashboard');
-    Route::post('/compose', [EmailController::class, 'send'])->name('emails.send');
+    Route::post('/compose', [EmailController::class, 'send'])
+        ->middleware('throttle:20,1')
+        ->name('emails.send');
 
     // Settings (Super Admin)
     Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');

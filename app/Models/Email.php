@@ -10,7 +10,6 @@ class Email extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
         'user_id',
         'sender',
         'recipient',
@@ -38,5 +37,11 @@ class Email extends Model
     protected static function booted()
     {
         static::addGlobalScope(new \App\Scopes\TenantScope);
+
+        static::creating(function (Email $email) {
+            if ($email->company_id === null && auth()->check()) {
+                $email->company_id = auth()->user()->company_id;
+            }
+        });
     }
 }
