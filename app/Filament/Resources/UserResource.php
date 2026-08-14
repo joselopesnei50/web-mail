@@ -3,15 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class UserResource extends Resource
 {
@@ -33,14 +30,15 @@ class UserResource extends Resource
                         ->label('E-mail')
                         ->email()
                         ->required()
-                        ->unique(ignoreRecord: true),
+                        ->unique(ignoreRecord: true)
+                        ->helperText('Este email tambem sera a conta no servidor (login IMAP/SMTP).'),
                     Forms\Components\TextInput::make('password')
                         ->label('Senha')
                         ->password()
                         ->required(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord)
                         ->minLength(8)
-                        ->dehydrated(fn ($state) => filled($state))
-                        ->dehydrateStateUsing(fn ($state) => \Illuminate\Support\Facades\Hash::make($state)),
+                        ->helperText('Ao criar/alterar, a mesma senha e aplicada no servidor de email.')
+                        ->dehydrated(fn ($state) => filled($state)),
                     Forms\Components\Select::make('company_id')
                         ->label('Empresa (Workspace)')
                         ->relationship('company', 'name')
@@ -54,6 +52,12 @@ class UserResource extends Resource
                         ])
                         ->required()
                         ->default('user'),
+                    Forms\Components\Toggle::make('create_mailbox')
+                        ->label('Criar conta no servidor de email')
+                        ->helperText('Cria a caixa no docker-mailserver. Desmarcar se o email e externo.')
+                        ->default(true)
+                        ->dehydrated(false)
+                        ->visible(fn ($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord),
                 ])->columns(2),
             ]);
     }
@@ -72,11 +76,12 @@ class UserResource extends Resource
                         'warning' => 'admin',
                         'danger' => 'super_admin',
                     ]),
+                Tables\Columns\IconColumn::make('has_mailbox')
+                    ->label('Caixa')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime('d/m/Y')->label('Criado em'),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
@@ -84,14 +89,12 @@ class UserResource extends Resource
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
-    
+
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
-    
+
     public static function getPages(): array
     {
         return [
@@ -99,5 +102,5 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
-    }    
+    }
 }

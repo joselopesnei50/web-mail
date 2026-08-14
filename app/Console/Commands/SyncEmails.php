@@ -2,79 +2,104 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use Webklex\IMAP\Facades\Client;
 use App\Models\Email;
 use App\Models\User;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+use Webklex\PHPIMAP\ClientManager;
 
 class SyncEmails extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'mail:sync';
+    protected $signature = 'mail:sync {--user= : sync apenas um user_id especifico}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Sync incoming emails via IMAP into the local database';
+    protected $description = 'Sync IMAP inbox de cada usuario com caixa no docker-mailserver';
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
-    public function handle()
+    public function handle(): int
     {
-        $this->info("Iniciando sincronização via IMAP...");
+        $query = User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('has_mailbox', true)
+            ->whereNotNull('mailbox_password_encrypted');
 
-        $user = User::first();
-        if (!$user) {
-            $this->error("Nenhum usuário cadastrado.");
-            return 1;
+        if ($id = $this->option('user')) {
+            $query->where('id', $id);
         }
 
-        try {
-            /** @var \Webklex\PHPIMAP\Client $client */
-            $client = Client::account('default');
-            $client->connect();
+        $users = $query->get();
+        if ($users->isEmpty()) {
+            $this->warn('Nenhum usuario com caixa ativa para sincronizar.');
+            return self::SUCCESS;
+        }
 
-            $folder = $client->getFolder('INBOX');
+        $host = config('imap.accounts.default.host');
+        $port = (int) config('imap.accounts.default.port', 993);
+        $encryption = config('imap.accounts.default.encryption', 'ssl');
+        $validateCert = (bool) config('imap.accounts.default.validate_cert', true);
+        $protocol = config('imap.accounts.default.protocol', 'imap');
 
-            $messages = $folder->query()->unseen()->limit(10)->get();
+        $totalNew = 0;
 
-            $count = 0;
-            foreach ($messages as $message) {
-                $subject = $message->getSubject();
-                $body = $message->getTextBody() ?? $message->getHTMLBody() ?? '';
-                
-                $from = $message->getFrom()[0]->mail ?? 'desconhecido@exemplo.com';
-                $to = $message->getTo()[0]->mail ?? $user->email;
-
-                Email::create([
-                    'user_id' => $user->id,
-                    'sender' => $from,
-                    'recipient' => $to,
-                    'subject' => (string) $subject,
-                    'body' => (string) $body,
-                    'type' => 'inbox',
-                    'is_read' => false,
-                ]);
-
-                $message->setFlag('Seen');
-                $count++;
+        foreach ($users as $user) {
+            $password = $user->getMailboxPassword();
+            if (! $password) {
+                $this->warn("User#{$user->id} ({$user->email}): senha nao pode ser decriptada, pulando.");
+                continue;
             }
 
-            $this->info("Sincronização completa. {$count} novas mensagens recebidas.");
-            return 0;
+            try {
+                $cm = new ClientManager([
+                    'accounts' => [
+                        'default' => [
+                            'host'          => $host,
+                            'port'          => $port,
+                            'encryption'    => $encryption,
+                            'validate_cert' => $validateCert,
+                            'username'      => $user->email,
+                            'password'      => $password,
+                            'protocol'      => $protocol,
+                        ],
+                    ],
+                ]);
+                $client = $cm->account('default');
+                $client->connect();
 
-        } catch (\Exception $e) {
-            $this->error("Erro ao sincronizar: " . $e->getMessage());
-            return 1;
+                $folder = $client->getFolder('INBOX');
+                $messages = $folder->query()->unseen()->limit(25)->get();
+
+                $count = 0;
+                foreach ($messages as $message) {
+                    $subject = (string) $message->getSubject();
+                    $body = $message->getTextBody() ?: (string) $message->getHTMLBody();
+                    $from = $message->getFrom()[0]->mail ?? 'desconhecido@exemplo.com';
+                    $to = $message->getTo()[0]->mail ?? $user->email;
+
+                    $email = Email::withoutGlobalScope(\App\Scopes\TenantScope::class)->create([
+                        'user_id'   => $user->id,
+                        'sender'    => $from,
+                        'recipient' => $to,
+                        'subject'   => $subject,
+                        'body'      => $body,
+                        'type'      => 'inbox',
+                        'is_read'   => false,
+                    ]);
+                    $email->forceFill(['company_id' => $user->company_id])->save();
+
+                    if (class_exists(\App\Jobs\AnalyzeEmailWithBruceIA::class)) {
+                        \App\Jobs\AnalyzeEmailWithBruceIA::dispatch($email);
+                    }
+
+                    $message->setFlag('Seen');
+                    $count++;
+                }
+
+                $totalNew += $count;
+                $this->info("User#{$user->id} ({$user->email}): +{$count} novas.");
+            } catch (\Throwable $e) {
+                Log::error('mail:sync falhou para user', ['user_id' => $user->id, 'email' => $user->email, 'error' => $e->getMessage()]);
+                $this->error("User#{$user->id} ({$user->email}): {$e->getMessage()}");
+            }
         }
+
+        $this->info("Sync concluida. Total novas: {$totalNew}");
+        return self::SUCCESS;
     }
 }
