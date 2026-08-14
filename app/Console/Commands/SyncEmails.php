@@ -83,6 +83,24 @@ class SyncEmails extends Command
                     ]);
                     $email->forceFill(['company_id' => $user->company_id])->save();
 
+                    foreach ($message->getAttachments() as $att) {
+                        try {
+                            $original = $att->getName() ?: ('attachment-' . $att->getId());
+                            $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
+                            $path = "attachments/{$user->id}/{$email->id}/" . uniqid('', true) . '_' . $safeName;
+                            \Illuminate\Support\Facades\Storage::disk('local')->put($path, $att->getContent());
+                            \App\Models\EmailAttachment::create([
+                                'email_id'      => $email->id,
+                                'path'          => $path,
+                                'original_name' => $original,
+                                'mime'          => $att->getContentType(),
+                                'size'          => strlen($att->getContent()),
+                            ]);
+                        } catch (\Throwable $e) {
+                            Log::warning('anexo IMAP falhou', ['email_id' => $email->id, 'error' => $e->getMessage()]);
+                        }
+                    }
+
                     if (class_exists(\App\Jobs\AnalyzeEmailWithBruceIA::class)) {
                         \App\Jobs\AnalyzeEmailWithBruceIA::dispatch($email);
                     }

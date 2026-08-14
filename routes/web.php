@@ -34,6 +34,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/compose', [EmailController::class, 'send'])
         ->middleware('throttle:20,1')
         ->name('emails.send');
+    Route::get('/emails/attachments/{attachment}/download', [EmailController::class, 'downloadAttachment'])
+        ->name('emails.attachments.download');
+
+    Route::get('/account/settings', [\App\Http\Controllers\AccountSettingsController::class, 'index'])->name('account.settings.index');
+    Route::post('/account/settings', [\App\Http\Controllers\AccountSettingsController::class, 'update'])->name('account.settings.update');
+    Route::post('/account/settings/password', [\App\Http\Controllers\AccountSettingsController::class, 'updatePassword'])->name('account.settings.password');
 
     // Settings (Super Admin)
     Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');

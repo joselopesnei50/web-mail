@@ -62,6 +62,12 @@
                     <svg class="{{ $folder == 'sent' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300' }} mr-3 flex-shrink-0 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                     Enviados
                 </a>
+
+                <p class="px-2 text-xs font-semibold text-[#8A8F9C] uppercase tracking-wider mb-2 mt-6">Conta</p>
+                <a href="{{ route('account.settings.index') }}" class="text-gray-300 hover:bg-white/5 hover:text-white group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors">
+                    <svg class="text-gray-500 group-hover:text-gray-300 mr-3 flex-shrink-0 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Configurações
+                </a>
             </nav>
 
             <!-- Perfil / Logout -->
@@ -170,24 +176,33 @@
                 <div class="flex-1 overflow-y-auto">
                     <div class="max-w-4xl mx-auto py-6 px-6 md:py-10 md:px-12">
                         <h2 class="hidden md:block text-3xl font-bold text-gray-900 mb-8 tracking-tight">Escrever Mensagem</h2>
-                        <form action="{{ route('emails.send') }}" method="POST" class="bg-white md:p-8 md:rounded-2xl md:shadow-sm md:border md:border-gray-100 space-y-6">
+                        <form action="{{ route('emails.send') }}" method="POST" enctype="multipart/form-data" class="bg-white md:p-8 md:rounded-2xl md:shadow-sm md:border md:border-gray-100 space-y-6">
                             @csrf
-                            
+                            @if(!empty($prefill['in_reply_to_id']))
+                                <input type="hidden" name="in_reply_to_id" value="{{ $prefill['in_reply_to_id'] }}">
+                            @endif
+
                             <div>
                                 <label for="recipient" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Para</label>
-                                <input type="email" name="recipient" id="recipient" placeholder="email@destinatario.com" class="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all sm:text-sm" required>
+                                <input type="email" name="recipient" id="recipient" placeholder="email@destinatario.com" value="{{ old('recipient', $prefill['recipient'] ?? '') }}" class="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all sm:text-sm" required>
                             </div>
-                            
+
                             <div>
                                 <label for="subject" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Assunto</label>
-                                <input type="text" name="subject" id="subject" placeholder="Do que se trata?" class="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all sm:text-sm">
+                                <input type="text" name="subject" id="subject" placeholder="Do que se trata?" value="{{ old('subject', $prefill['subject'] ?? '') }}" class="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all sm:text-sm">
                             </div>
-                            
+
                             <div>
                                 <label for="body" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Mensagem</label>
-                                <textarea name="body" id="body" rows="12" placeholder="Escreva sua mensagem aqui..." class="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all sm:text-sm resize-none" required></textarea>
+                                <textarea name="body" id="body" rows="12" placeholder="Escreva sua mensagem aqui..." class="block w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 transition-all sm:text-sm resize-none" required>{{ old('body', $prefill['body'] ?? '') }}</textarea>
                             </div>
-                            
+
+                            <div>
+                                <label for="attachments" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Anexos (opcional, até 20MB cada)</label>
+                                <input type="file" name="attachments[]" id="attachments" multiple
+                                       class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+                            </div>
+
                             <div class="flex justify-end pt-4 border-t border-gray-100 space-x-3">
                                 <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center bg-white border border-gray-300 text-gray-700 px-6 py-2.5 rounded-xl hover:bg-gray-50 transition font-semibold text-sm shadow-sm">Cancelar</a>
                                 <button type="submit" class="inline-flex items-center justify-center bg-gradient-to-r from-slate-500 to-slate-600 text-white px-8 py-2.5 rounded-xl hover:from-slate-600 hover:to-slate-700 transition font-bold text-sm shadow-md">
@@ -233,14 +248,31 @@
                         <div class="prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed text-base">
                             {{ $selectedEmail->body }}
                         </div>
-                        
+
+                        @if($selectedEmail->attachments && $selectedEmail->attachments->count() > 0)
+                            <div class="mt-8 pt-6 border-t border-gray-100">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Anexos ({{ $selectedEmail->attachments->count() }})</p>
+                                <ul class="space-y-2">
+                                    @foreach($selectedEmail->attachments as $att)
+                                        <li>
+                                            <a href="{{ route('emails.attachments.download', $att) }}" class="inline-flex items-center px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-700 font-medium transition-colors">
+                                                <svg class="w-5 h-5 mr-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                                <span class="mr-3">{{ $att->original_name }}</span>
+                                                <span class="text-xs text-gray-400">{{ $att->humanSize() }}</span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
                         <div class="mt-12 pt-8 border-t border-gray-100 flex space-x-4">
-                            <a href="{{ route('dashboard', ['compose' => true]) }}" class="inline-flex items-center px-6 py-2.5 border-2 border-gray-200 shadow-sm text-sm font-bold rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                            <a href="{{ route('dashboard', ['reply' => $selectedEmail->id]) }}" class="inline-flex items-center px-6 py-2.5 border-2 border-gray-200 shadow-sm text-sm font-bold rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
                                 <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
                                 Responder
                             </a>
-                            <a href="{{ route('dashboard', ['compose' => true]) }}" class="inline-flex items-center px-6 py-2.5 border-2 border-gray-200 shadow-sm text-sm font-bold rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
-                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" transform="scale(-1, 1) translate(-24, 0)"></path></svg>
+                            <a href="{{ route('dashboard', ['forward' => $selectedEmail->id]) }}" class="inline-flex items-center px-6 py-2.5 border-2 border-gray-200 shadow-sm text-sm font-bold rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                                 Encaminhar
                             </a>
                         </div>

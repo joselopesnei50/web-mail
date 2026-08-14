@@ -34,6 +34,11 @@ class Email extends Model
         return $this->hasOne(EmailAiReport::class);
     }
 
+    public function attachments()
+    {
+        return $this->hasMany(EmailAttachment::class);
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new \App\Scopes\TenantScope);
